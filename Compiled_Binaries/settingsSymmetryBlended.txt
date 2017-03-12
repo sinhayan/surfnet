@@ -1,0 +1,294 @@
+Pipeline:
+	Load				[Surface Features Samples Distances Maps]
+	Process				[#Surface #Distances #Features #Samples #Maps]
+	MapProcess			[#ExploreConformals #Aggregate #Extrapolate]
+	Algorithm			AlgCorrConfmaps
+	BenchmarkQuery		[MapConfidence_Truth]
+	SecondBenchmark		[MapConfidence_TruthWithSymmetry]
+	LoadExternalResult	none
+	FinalExternalMap	none
+	Verbous				Min
+	WorkFolder			./
+	Subdirs				DirByMeshname
+	#Subdirs			none
+	Visualize			true
+	VisSettings			./renderBlended.txt
+	RecordTiming		true
+	PostFinal			[DenseMap DenseMapPrecise #SymmetryFunction #CacheVtoV]
+	AnalyzeCollFrac		0.
+	AnalyzeCollNum		10
+
+AlgCorrConfmaps:
+	#Type			PipelineExploreConfmaps
+	Type			OneStepSpectral
+	Surface				ConfSurfaces
+	#GeneratorSets		[RandomTripletSampler]
+	GeneratorSets		[TripletSampler_Adaptive_Symm]
+	SamplesMobVoteCast	SamplesMobVoteCast_AGD
+	#SamplesMobVoteCast	SamplesMobVoteCast_Human
+	SamplesFineCorr		SamplesFine_EVEN	
+	SamplesForErr		SamplesFine_EVEN
+	SamplesForFineErr	SamplesFine_EVEN
+	
+	LoadSimilarities	[MapSimilarity]
+	LoadConfidences		[MapConfidence_MultiConf MapConfidence_TriangleArea]
+	
+	#AggregationMethod		PickBest
+	#AggregationMethod		VoteInCorrMatrixGreedy
+	AggregationMethod	ClusterMaps
+		#ClusteringAlgorthm	Spectral
+		#ClusteringAlgorthm	GreedyClusterValue
+		MaxConfMapsPerCorr	1
+		ClusteringAlgorthm	GreedyCorrespondence
+		#ClusteringAlgorthm	GreeedyNothing
+		MapSimilarity		MapSimilarity
+		ClusterValue		MapConfidence_MultiConf
+	#AggregationMethod	LoadTruth
+		#NumFeaturePnts		3
+		#FeaturePntOrder		[33 0 1 11 12 25 10 24 17 18 34 35 23 4 5 15 16 ]
+	
+	#ExtrapolationMethod	none
+	#ExtrapolationMethod	GMDS
+		GMDSInterpEpsilon	0
+	ExtrapolationMethod		MultiConformal
+		MultiConfInterp		GeodesicCentroid
+		#MultiConfInterp		AverageMobius
+		#MultiConfInterp		TakeBest
+		MultiConfWeights	MapConfidence_MultiConf
+		SimplifyNumConf		-1
+		MultiRefineCorrs	false
+		
+	#SVDSparse			SVDLib
+	SVDSparse			Matlab
+
+	CoarseFinalMapExt	.final.coarse.map
+	FinalMapExt		.final.map
+	ConfCollectExt		.conf.collection.map
+	MultiCollectExt		.multi.collection.map
+	PickBestConf		.8
+	FurtherPairsSearch	true
+
+	MapEvaluator		MapConfidence_TriangleArea
+	#MapEvaluator		MapConfidence_Fraction_MCN
+	#MapEvaluator		MapConfidence_MultiConf
+	
+	#FineMapEvaluator	MapConfidence_TriangleArea
+	FineMapEvaluator	MapConfidence_MultiConf
+	#FineMapEvaluator	MapConfidence_Constant
+	
+	RefinementMapEval	MapConfidence_TriangleArea
+	#RefinementMapEval	MapConfidence_MultiConf
+	RefineEnergyFrac	.85
+	OutputName		IS_Blended
+	
+MapSimilarity:
+	#Type				MapSimilarityOverlap
+	Type				MapSimilarityDistance
+	#DistOnSurface		OnTheFlyDistances
+	OverlapSet			SamplesFine_EVEN
+	Flags				[DisallowInconsistent #ScaleByConfidence]
+	#MaxDistance			.25
+	MaxDistance			-1
+	Sigma				.5
+	
+	SimilarityThresh	0
+	QualityThreshRatio	.8
+	MaxMapsForCluster	200
+	
+ConfSurfaces:
+	Type				SurfaceMidEdgeConf
+	#Type				Surface
+	MeshName			[dinopet mesh001]
+	MeshExt				.off
+	FlatExt				.flt.ifs
+	FlatSmoothIters		0
+	LoadSymmetry		[Reflection]
+	
+	CameraFile			[camera.txt camera.txt]
+	CameraLine			[0 0]
+	CameraOrigin		[none 0 0 none 0 0]
+	CameraTowards		[none 0 0 none 0 0]
+	CameraUp			[none 0 0 none 0 0]
+	
+	#DefaultMetric		SimpleMetric
+	DefaultMetric		GeodesicSubsets
+	AdditionalMetrics	[OnTheFlyDistances]
+	Features			[AGDFeature]
+	Samples				[SamplesMobVoteCast_AGD SamplesFine_EVEN AllVertices]
+
+SimpleMetric:
+	Type				DistanceGeodesic
+	Calculation			GEODIST_DIJKSTRA_FUNKHOUSER
+	Extension			.geodesic.distances
+
+GeodesicSubsets:
+	Type				DistanceLazySubsets
+	Calculation			GEODIST_DIJKSTRA_FUNKHOUSER
+	SetsFrom			[SamplesMobVoteCast_AGD SamplesFine_EVEN ]
+	SetsTo				all
+	Extension			.geodesic.distances
+
+OnTheFlyDistances:
+	Type				DistanceOnTheFly
+	Calculation			GEODIST_DIJKSTRA_FUNKHOUSER
+	TryDefault			true
+	NumCachedVertices	-1
+
+MapConfidence_TruthWithSymmetry:
+	Type				MapConfidenceCompareToTruthWithSym
+	MapType				CoarseMap_CreateTrueAndSymmetric
+	FileFeaturesMap		xxx.sym.info
+	AtSamples			none
+	AtSamplesRange		BenchmarkQuery
+	Path				../../../Libs/Data/Meshes/scape/truth_vts_scapecomp_original/
+	FileVertexIDs		[xxx.vts xxx.vts]
+	TruthThreshold		.2
+	Extension			.benchmark.withsymmetry.map
+	
+MapConfidence_Truth:
+	Type				MapConfidenceCompareToTruth
+	#MapType			CoarseMap_FeaturePointsCorrespondence	
+	#MapType			CoarseMap_FunkCor
+	MapType				CoarseMap_SameVertexIDs
+
+	AtSamples			none
+	AtSamplesRange		SamplesFine_Benchmark
+	#AtSamplesRange		BenchmarkQuery
+	#AtSamplesRange		FinalConformalMap
+	#AtSamplesRange		Domain
+	RangeAlgPrefix		Lipman
+	Path				../../../Libs/Data/Meshes/scape/truth_vts_scapecomp_original/
+	FileVertexIDs		[xxx.vts xxx.vts] 
+	TruthThreshold		.2
+	Extension			.benchmark.map
+	
+AGDFeature:
+	Type				FeatureFastAGD
+	#Type				FeatureAGD
+	Extension			.feat.vals
+	NInit				256
+
+CurvFeature:
+	Type				FeatureCurvature
+	Extension			.curvature.vals
+	NInit				-1
+
+SamplesMobVoteCast_Human:
+	Type				HumanPnts_Benchmark
+	Extension			.smplset.human
+
+SamplesCurvatureExtrema:
+	#Type				SurfaceSampleSet_Extrema
+	Type				SurfaceSampleSet_Max
+	CorrFeature			CurvFeature
+	MaxSamples			100
+	MinSamples			1
+	ExtremaRingRadius	.01
+	Extension			.smplset.curv
+
+SamplesMobVoteCast_AGD:
+	#Type				SurfaceSampleSet_Extrema
+	Type				SurfaceSampleSet_Max
+	CorrFeature			AGDFeature
+	MaxSamples			10
+	MinSamples			5
+	#SmoothingIters		5
+	ExtremaRingRadius	.2
+	Extension			.smplset.agd
+	
+SamplesFine_Benchmark:
+	Type				SurfaceSampleSet_IterFurthest
+	InitialSet			none
+	NumSamples			1024
+	Extension			.smplset.fine.benchmark
+	
+SamplesFine_EVEN:
+	Type				SurfaceSampleSet_MGD
+	InitialSet			SamplesMobVoteCast_AGD	
+	MaxIterations		256
+	IterationTau		1.
+	MaxSamples			256
+	Extension			.smplset.even
+
+SamplesFine_EVEN_Lipman:
+	Type				SurfaceSampleSet_MGD
+	#InitialSet			SamplesMobVoteCast_AGD	
+	InitialSet			SamplesCurvatureExtrema
+	MaxIterations		100
+	IterationTau		1.
+	MaxSamples			100
+	Extension			.smplset.lipman.even
+
+TripletSampler_Adaptive:
+	Type				SetSamplerAdaptive
+	FullSampler			TripletSampler_Full
+	MaxNumSamples		2000
+	#SuggestedNumSampC	2
+	SuggestedNumSampC	10
+
+TripletSampler_Full:
+	Type				SetSampler
+	NumCorrespondences	3
+	IterationType		Exhaustive
+	MinDistThresh		.1
+	#FeatureThresh		[AGDFeature .8]
+	DistToOtherThresh	.5
+	MaxNumSamples		100000
+	
+TripletSampler_Adaptive_Symm:
+	Type				SetSamplerAdaptive
+	FullSampler			TripletSampler_Full_Symm
+	MaxNumSamples		2000
+
+TripletSampler_Full_Symm:
+	Type				SymmetricSetSampler
+	NumCorrespondences	3
+	IterationType		Exhaustive
+	MinDistThresh		.1
+	FeatureThresh		[AGDFeature .8]
+	DistToOtherThresh	.5
+	MaxNumSamples		100000
+	
+RandomTripletSampler:
+	Type				SetSampler
+	NumCorrespondences	3
+	IterationType		Random
+	MaxNumSamples		10000000
+	MinDistThresh		0
+	DistToOtherThresh	0
+
+MapConfidence_TriangleArea:
+	Type				MapConfidenceFaceArea
+	ValueType			TRIAREA_VAL_MIN_OVER_MAX
+	#ValueType			TRISTRETCH_SV_RATIO
+	#ValueType			TRISTRETCH_SV_L2STRETCH
+	AtSamples			SamplesFine_EVEN
+	AtSamplesRange		none
+	
+MapConfidence_MultiConf:
+	Type				MapConfidenceMultiConf
+	Confidences			[MapConfidence_TriangleArea none]
+	#Confidence			[MapConfidence_TriangleArea MapConfidence_DistToGens]	
+	Similarity			MapSimilarity
+	WeightsCalculation	MULTICONF_WEIGHT_CONFIDENCE	
+	#WeightsCalculation	MULTICONF_WEIGHT_PER_POINT_EIGENANALYSIS
+	#WeightsCalculation	MULTICONF_WEIGHT_PER_POINT_EIGENANALYSIS_CONFIDENCE
+	AtSamples			SamplesFine_EVEN
+	AtSamplesRange		none	
+	
+MapConfidence_Fraction_MCN:
+	Type				MapConfidenceMutuallyClosest
+	Matching			F2C_MUTUALLY_CLOSEST_NEIGHBORS
+	MapValue			MCN_Fraction
+
+MapConfidence_DistToGens:
+	Type				MapConfidenceDistanceToGen
+	#AtSamples			SamplesFine_EVEN	
+	AtSamples			AllVertices
+	
+MapConfidence_Constant:
+	Type				MapConfidenceConstant
+
+
+
+

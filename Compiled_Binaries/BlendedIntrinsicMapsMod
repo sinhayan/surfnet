@@ -1,0 +1,108 @@
+#!/bin/bash
+
+   # change some parameters. You can change more in settings.txt
+   # num samples - to approximate confidence and similarity
+numSamples=256
+	# set to false if you only want images / dense map
+visualize=false
+	# work folder
+#workDir="./WorkDir"
+
+
+############ YOU SHOULD NOT NEED TO EDIT ANYTHING BELOW THIS LINE #######################
+	# by default eigendecomposition of the sparse blended matrix is used via MATLAB
+	# (ran as external command). If you don't have MATLAB installed - 
+	# set useMatlab=false and SVDLIBC will be used instead.
+matlabPath="/usr/local/matlab/bin/"
+useMatlab=false
+if [ $useMatlab == "true" ]; then
+	PATH="$PATH:$matlabPath"
+	export PATH
+	useMatlab=Matlab
+else
+	useMatlab=SVDLib
+fi
+
+	# read file names as arguments - or use default
+if [ $# -ge 3 ]; then
+	mesh1=$1
+	mesh2=$2
+	workDir=$3
+else
+	echo =============================
+	echo ============ USAGE: =========
+	echo "    ./BlendedIntrinsicMaps mesh1.off mesh2.off"
+	echo
+	echo ============ NOTES: =========
+	echo "    if you dont have MATLAB installed -"
+	echo "           open set useMatlab=false (in BlendedIntrinsicMaps)"
+	echo =============================
+	exit
+fi
+
+
+if [ ! -d $workDir ]; then
+	mkdir $workDir
+fi
+
+if [ ! -d $workDir ]; then
+	echo Could not find work folder: $workDir
+	exit
+fi
+
+
+
+	# separate file name and extension - to create workspace directory
+if [ ! -f $mesh1 ]; then
+	echo File $mesh1 does not exist!
+fi;
+
+if [ ! -f $mesh2 ]; then
+	echo File $mesh2 does not exist!
+fi;
+
+fileonly1=`basename $mesh1`
+fileonly2=`basename $mesh2`
+ext="."`echo "$fileonly1" | cut -d'.' -f2`
+mesh1name=`echo "$fileonly1" | cut -d'.' -f1`
+mesh2name=`echo "$fileonly2" | cut -d'.' -f1`
+	
+	# create workspace directory, copy files
+if [ ! -d $workDir/$mesh1name ]; then
+	mkdir $workDir/$mesh1name
+fi
+
+if [ ! -f $workDir/$mesh1name/$mesh1name$ext ]; then
+	cp $mesh1 $workDir/$mesh1name
+fi
+
+if [ ! -d $workDir/$mesh2name ]; then
+	mkdir $workDir/$mesh2name/
+fi
+
+if [ ! -f $workDir/$mesh2name/$mesh2name$ext ]; then
+	cp $mesh2 $workDir/$mesh2name/
+fi
+
+	# NOTE: arguments to SurfaceVis below OVERWRITE settings.txt file
+	# I included them here for simplicity - so that one would not have to modify settings.txt
+	
+	# Set input files (copied to their work directories)
+params="-ConfSurfaces MeshName [$mesh1name $mesh2name] MeshExt $ext"
+	# Set number of samples on surface
+params="$params -SamplesFine_EVEN MaxSamples $numSamples"
+	# Set whether to use matlab
+params="$params -AlgCorrConfmaps SVDSparse $useMatlab"
+	# Set whether to open visualization
+params="$params -Pipeline Visualize $visualize"
+	# Set workDir
+params="$params -Pipeline WorkFolder $workDir"
+
+
+./`uname`_`uname -m`_SurfaceVis ./settingsBlended.txt $params
+result=$workDir/$mesh1name/Blended_DenseMapPreceise_"$mesh1name"_to_"$mesh2name".dense.preceise.map
+echo "Finished blending intrinsic maps. See the result in:"
+echo "     $result"
+echo "Format description: "
+echo "   http://www.cs.princeton.edu/~vk/CorrsCode/doc_bin.html#dense.preceise.map"
+

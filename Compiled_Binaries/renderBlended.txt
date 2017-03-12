@@ -1,0 +1,73 @@
+RendererDefault:
+	Type				SurfaceCorrespondence
+	NumSurfaces 		2
+	MeshFlags			[Faces #Edges #Vertices #FaceIDs #EdgeIDs #VertexIDs #Axes #Backfacing]
+	SurfFlags			[#DefaultSamples #SampleIDs]
+	
+	Alpha				.8
+
+	#ConfSurf			RenderConformal
+	ConfSurf			RenderOriginal
+
+	ShotOnly			false
+	ShotName			Screenshot
+	ShotTypes			[InitialEmptyShot #BestExtrapolated #ErrorColors #BestConformal FinalColors]
+
+	RenderMap			[#BestConformal BestExtrapolated #BenchmarkQuery #Truth #Collection]
+	MapFlags			[Edges Colors #MapError #BenchErrorOnly]
+	MaxNumMapColors		100
+	#MaxNumMapEdges		35	
+	MaxNumMapEdges		100
+	MaxCoarseElements	256
+	RenderCorrCoarse	[MapMultiConformal MapConformal]
+	EnableLighting		false
+	
+	#DrawMapColorsOnSurf none
+	#DrawMapColorsOnSurf MapConfidence
+	DrawMapColorsOnSurf XYZ
+	#DrawMapColorsOnSurf FarVertices
+	#DrawMapColorsOnSurf	MapDiscrepancy
+	#DrawMapColorsOnSurf	Feature
+	#DrawMapColorsOnSurf	Distance
+	#DrawMapColorsOnSurf	ThresholdedDistance	
+	#DrawMapColorsOnSurf MultiMapDistGen	
+	#DrawMapColorsOnSurf MultiMapConsistency
+	#DrawMapColorsOnSurf MultiMapConfidence	
+	#DrawMapColorsOnSurf MultiMapFinal	
+	#DrawMapColorsOnSurf MultiMapTop3Weights
+	#DrawMapColorsOnSurf ErrorColors	
+	ConfMapInMultiMap	0
+
+	SingleCorrColor		none
+	#SingleCorrColor		keep	
+	#SingleCorrColor		CorrError
+	#SingleCorrColor		Consistency
+	#SingleCorrColor		MapConfidence
+	#SingleCorrColor		DistanceToGenerators
+	#SingleCorrColor			CombinedWeight
+
+	#TopRightWindow		[Clustering .2 .2]
+	SelectedConfMap		-1
+	DistFromConfMap		-1
+
+	AlgorithmFlags		[none]
+
+	SelectedVertex		[0 -1 1 -1]
+	#SelectedVertex		[1 106]
+	SelectedSample		[0 -1 1 -1]
+	#SelectedSequence	[id1 id2 id3 id4]
+	SelectedSequence	[-1]
+	CorrToSelected		[-1]
+	SeqFromSet			SamplesMobVoteCast_AGD
+	DistanceThresholds	[.05 .1 .15 .2]
+	
+Surf_1:
+	MeshFlagsFlips		[none]
+	SurfFlagsFlips		[none]
+
+Surf_2:
+	MeshFlagsFlips		[none]
+	SurfFlagsFlips		[none]
+
+
+
